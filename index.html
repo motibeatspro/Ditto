@@ -258,7 +258,7 @@ footer{border-top:1px solid var(--line);background:var(--panel);padding:10px 16p
 
 <div class="panel" id="settings">
   <div class="card">
-    <h2>설정</h2>
+    <h2>설정 <span class="hint" id="buildTag"></span></h2>
     <div class="field">
       <label>Gemini API 키</label>
       <input type="password" id="apiKey" placeholder="AQ. 또는 AIza 로 시작하는 키" autocomplete="off">
@@ -366,7 +366,7 @@ const UI_EN = {
  '모델 (보통 건드릴 필요 없음)':'Models (normally leave as is)', '흐르는 동시통역':'Streaming interpreter', '실시간 전사 (문장 단위 방식)':'Live transcription (sentence mode)', '번역':'Translation', '요약':'Summary', '정밀 전사':'Precise transcript',
  '무료 등급은 보낸 내용이 Google 제품 개선에 쓰일 수 있습니다. 민감한 회의라면 Google AI Studio에서 결제를 켜면 유료 등급(약 400원/시간)으로 바뀝니다.':'On the free tier Google may use submitted content to improve its products. For sensitive meetings, enable billing in Google AI Studio (about US$0.30/hour).',
  '저장하고 닫기':'Save & close', '저장했습니다':'Saved', '확인 중…':'Checking…', '키가 올바르지 않습니다':'The key is not valid', '✅ 키 정상, 모델 5개 모두 사용 가능':'✅ Key OK, all 5 models available',
- '녹음 중에는 바꿀 수 없습니다':'Cannot change while recording', '먼저 Gemini API 키를 넣어 주세요':'Please add your Gemini API key first', 'Azure 키 또는 Gemini 키를 하나 이상 넣어 주세요':'Add an Azure key or a Gemini key first', 'Gemini 키가 없어 자동 방식으로 전환합니다':'No Gemini key — switching to Auto', 'Gemini 키가 없어 Gemini 엔진은 건너뜁니다':'No Gemini key — skipping Gemini engines', '먼저 녹음을 종료해 주세요':'Stop recording first', '이전 기록 아래에 이어서 녹음할까요? (취소하면 아무것도 하지 않습니다)':'Continue recording below the previous record? (Cancel does nothing)', '현재 기록을 지우고 새 회의를 시작할까요? (내보내기 하지 않은 내용은 사라집니다)':'Clear the current record and start a new meeting? (Unexported content will be lost)',
+ '녹음 중에는 바꿀 수 없습니다':'Cannot change while recording', '먼저 Gemini API 키를 넣어 주세요':'Please add your Gemini API key first', 'Azure 키 또는 Gemini 키를 하나 이상 넣어 주세요':'Add an Azure key or a Gemini key first', '폰에서는 Azure 키 또는 Gemini 키가 필요합니다 (⚙ 설정)':'On a phone you need an Azure or Gemini key (⚙ Settings)', 'Gemini 키가 없어 자동 방식으로 전환합니다':'No Gemini key — switching to Auto', 'Gemini 키가 없어 Gemini 엔진은 건너뜁니다':'No Gemini key — skipping Gemini engines', '먼저 녹음을 종료해 주세요':'Stop recording first', '이전 기록 아래에 이어서 녹음할까요? (취소하면 아무것도 하지 않습니다)':'Continue recording below the previous record? (Cancel does nothing)', '현재 기록을 지우고 새 회의를 시작할까요? (내보내기 하지 않은 내용은 사라집니다)':'Clear the current record and start a new meeting? (Unexported content will be lost)',
  '듣고 있습니다. 말이 끝나는 단위로 문장이 올라옵니다.':'Listening. Sentences appear as each utterance completes.', '녹음을 종료했습니다. 아래에서 요약 생성 / 정밀 전사를 눌러 보세요.':'Recording stopped. Try Summarize / Precise transcript below.', '화면 공유가 끝나 녹음을 종료합니다':'Screen sharing ended, stopping', '화면 공유가 취소되었습니다.':'Screen sharing was cancelled.',
  '소리가 공유되지 않았습니다. 공유 창에서 "탭 오디오 공유" 또는 "시스템 오디오 공유"를 켜 주세요. (Zoom 앱 소리는 "전체 화면" + 시스템 오디오 공유)':'No audio was shared. In the share dialog enable "Share tab audio" or "Share system audio". (For the Zoom app: "Entire screen" + system audio)',
  'WebSocket 연결 실패 (API 키 또는 네트워크 확인)':'WebSocket connection failed (check API key or network)', '연결 오류':'Connection error', '언어 코드를 서버가 거부해 자동 감지로 전환했습니다':'The server rejected the language code; switched to auto-detect', '언어 변경은 다음 녹음부터 적용됩니다 (동시통역 방식)':'Language changes apply from the next recording (streaming mode)', '내 언어와 상대 언어가 같습니다':'Your language and theirs are the same', '통역 방식은 다음 녹음부터 적용됩니다':'Mode changes apply from the next recording',
@@ -398,6 +398,7 @@ function applyUI(){
 }
 
 const API = 'https://generativelanguage.googleapis.com';
+const BUILD = 'v14';
 
 // ---------- settings ----------
 const settings = Object.assign({
@@ -604,7 +605,7 @@ $('#termPad').addEventListener('input', () => { clearTimeout(padT); padT = setTi
 $('#peoplePad').addEventListener('input', () => { notepad.people = $('#peoplePad').value; lsSet('mcs_people', notepad.people); });
 $('#notePad').addEventListener('input', () => { notepad.notes = $('#notePad').value; lsSet('mcs_notes', notepad.notes); });
 function meetingContext(){ return [settings.context, notepad.people && ('Attendees: '+notepad.people.replace(/\n/g,'; ')), notepad.notes && ('User notes: '+notepad.notes.slice(0,1500))].filter(Boolean).join('\n'); }
-$('#btnCopyLog').onclick = async () => { try { await navigator.clipboard.writeText(['Ditto Note diag', 'engine='+settings.engine, 'models='+[settings.mXlate,settings.mLive,settings.mTrans,settings.mSum].join(','), 'my='+settings.my+' partner='+settings.partner, ...diagLog].join('\n')); toast('로그를 복사했습니다'); } catch { toast('복사 실패'); } };
+$('#btnCopyLog').onclick = async () => { try { await navigator.clipboard.writeText(['Ditto Note diag '+BUILD, 'device='+(isPhone()?'phone':'desktop'), 'engine='+settings.engine, 'azure='+(azConfigured()?'set':'empty'), 'gemini='+(apiKey()?'set':'empty'), 'models='+[settings.mXlate,settings.mLive,settings.mTrans,settings.mSum].join(','), 'my='+settings.my+' partner='+settings.partner, ...diagLog].join('\n')); toast('로그를 복사했습니다'); } catch { toast('복사 실패'); } };
 $('#btnTestAz').onclick = async () => {
   saveSettingsUI(); const r = $('#azTestResult'); r.textContent = t('확인 중…');
   const key = lsGet('mcs_az_key','').trim(), region = normRegion(settings.azRegion);
@@ -889,7 +890,8 @@ const azWithinCap = () => azUsage() < (settings.azCap ?? 290);
 const azConfigured = () => !!(lsGet('mcs_az_key','') && settings.azRegion);
 
 // ---------- Browser built-in engine: Chrome Web Speech (recognition) + Chrome Translator API (on-device) — free, no key ----------
-const browserEngineAvailable = () => !!(window.webkitSpeechRecognition || window.SpeechRecognition);
+const isPhone = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && !navigator.mediaDevices?.getDisplayMedia);
+const browserEngineAvailable = () => !!(window.webkitSpeechRecognition || window.SpeechRecognition) && !isPhone();
 const xl = { cache:{} };
 async function browserTranslator(from, to){
   const k = from+'>'+to; if (xl.cache[k] !== undefined) return xl.cache[k];
@@ -916,7 +918,7 @@ class BrowserSession {
       if (interim){ this.partial = interim.trim(); this.translatePartial(); this.group?.onPartial(this); }
       for (const f of finals){ const text = f.transcript.trim(); if (!text) continue; this.partial=''; this.partialT=''; this.translateFinal(text, f.confidence ?? 0.5); }
     };
-    rec.onerror = ev => { if (this.closed) return; if (ev.error === 'no-speech' || ev.error === 'aborted') return; rateNote(`브라우저 인식(${this.from}) 오류: ${ev.error}`, true); if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') this.closed = true; };
+    rec.onerror = ev => { if (this.closed) return; if (ev.error === 'no-speech' || ev.error === 'aborted') return; if (ev.error === 'audio-capture' && !this.freed){ this.freed = true; try { keptMic?.getTracks().forEach(t => t.stop()); keptMic = null; } catch {} return; } rateNote(`브라우저 인식(${this.from}) 오류: ${ev.error}`, true); if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') this.closed = true; };
     rec.onend = () => { if (!this.closed) { try { this.startRec(); } catch {} } };  // Chrome stops after silence — restart quietly
     this.track = track; this.startRec();
     rateNote(`브라우저 내장 엔진 연결됨 (${rec.lang} → ${this.to}${this.tr?' · 기기 내 번역':' · Gemini 번역'})`);
@@ -1005,7 +1007,7 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 async function start(){
   // Need at least one usable engine: Azure key, Gemini key, or the browser's built-in recognizer
   const canAzure = azConfigured(), canGemini = !!apiKey(), canBrowser = browserEngineAvailable() && (settings.engine==='auto' || settings.engine==='browser');
-  if (!canAzure && !canGemini && !canBrowser){ loadSettingsUI(); $('#settings').classList.add('open'); return toast('Azure 키 또는 Gemini 키를 하나 이상 넣어 주세요'); }
+  if (!canAzure && !canGemini && !canBrowser){ loadSettingsUI(); $('#settings').classList.add('open'); return toast(isPhone() ? '폰에서는 Azure 키 또는 Gemini 키가 필요합니다 (⚙ 설정)' : 'Azure 키 또는 Gemini 키를 하나 이상 넣어 주세요'); }
   if (!canGemini && (settings.engine==='stream' || settings.engine==='sentence')){ settings.engine = 'auto'; lsSet(LS.settings, JSON.stringify(settings)); loadSettingsUI(); toast('Gemini 키가 없어 자동 방식으로 전환합니다'); }
   if (state.segments.length && !confirm(t('이전 기록 아래에 이어서 녹음할까요? (취소하면 아무것도 하지 않습니다)'))) return;
   setStatus('연결 중…','');
@@ -1217,6 +1219,7 @@ $('#btnTestKey').onclick = async () => {
 // ---------- restore ----------
 (function init(){
   loadSettingsUI(); applyUI(); updateSeeHead(); renderTerms();
+  $('#buildTag').textContent = BUILD;
   { const em = $('#emptyMsg'); if (em && !state.segments.length) em.innerHTML = esc(t('녹음 시작을 누르면 여기에 실시간 전사와 번역이 나란히 표시됩니다.')) + `<br><span style="font-size:13px">${esc(t(azConfigured()||apiKey() ? '' : '처음이라면 오른쪽 위 ⚙ 설정에서 Azure 또는 Gemini 키를 먼저 넣어 주세요.'))}</span>`; }
   const applyLayout = () => { const st = lsGet('mcs_layout','side')==='stack'; document.body.classList.toggle('stack', st); $('#btnLayout').textContent = t(st ? '⇅ 회의 모드' : '⇆ 검토 모드'); };
   $('#btnLayout').onclick = () => { lsSet('mcs_layout', lsGet('mcs_layout','side')==='stack' ? 'side' : 'stack'); applyLayout(); };
